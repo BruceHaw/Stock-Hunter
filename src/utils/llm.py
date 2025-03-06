@@ -35,9 +35,10 @@ def call_llm(
     
     model_info = get_model_info(model_name)
     llm = get_model(model_name, model_provider)
+
     
     # For non-Deepseek models, we can use structured output
-    if not (model_info and model_info.is_deepseek()):
+    if not (model_info and model_info.is_deepseek_or_gemini()):
         llm = llm.with_structured_output(
             pydantic_model,
             method="json_mode",
@@ -50,7 +51,7 @@ def call_llm(
             result = llm.invoke(prompt)
             
             # For Deepseek, we need to extract and parse the JSON manually
-            if model_info and model_info.is_deepseek():
+            if model_info and model_info.is_deepseek_or_gemini():
                 parsed_result = extract_json_from_deepseek_response(result.content)
                 if parsed_result:
                     return pydantic_model(**parsed_result)

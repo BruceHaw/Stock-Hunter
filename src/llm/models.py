@@ -5,6 +5,7 @@ from langchain_openai import ChatOpenAI
 from enum import Enum
 from pydantic import BaseModel
 from typing import Tuple
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 class ModelProvider(str, Enum):
@@ -12,6 +13,7 @@ class ModelProvider(str, Enum):
     OPENAI = "OpenAI"
     GROQ = "Groq"
     ANTHROPIC = "Anthropic"
+    GEMINI = "Google"
 
 
 class LLMModel(BaseModel):
@@ -24,9 +26,11 @@ class LLMModel(BaseModel):
         """Convert to format needed for questionary choices"""
         return (self.display_name, self.model_name, self.provider.value)
     
-    def is_deepseek(self) -> bool:
+    def is_deepseek_or_gemini(self) -> bool:
         """Check if the model is a DeepSeek model"""
-        return self.model_name.startswith("deepseek")
+        return self.model_name.startswith("deepseek") or self.model_name.startswith('gemini')
+    
+
 
 
 # Define available models
@@ -76,6 +80,17 @@ AVAILABLE_MODELS = [
         model_name="o3-mini",
         provider=ModelProvider.OPENAI
     ),
+    # 添加 Gemini 模型
+    LLMModel(
+        display_name="[gemini] gemini-2.0-flash",  # 你可以自定义显示名称
+        model_name="gemini-2.0-flash",  # Gemini 模型名称
+        provider=ModelProvider.GEMINI
+    ),
+    LLMModel(
+        display_name="[gemini] gemini-2.0-flash-think", # 你可以自定义显示名称
+        model_name="gemini-2.0-flash-thinking-exp", # Gemini 模型名称，如果适用
+        provider=ModelProvider.GEMINI
+    ),
 ]
 
 # Create LLM_ORDER in the format expected by the UI
@@ -107,3 +122,10 @@ def get_model(model_name: str, model_provider: ModelProvider) -> ChatOpenAI | Ch
             print(f"API Key Error: Please make sure ANTHROPIC_API_KEY is set in your .env file.")
             raise ValueError("Anthropic API key not found.  Please make sure ANTHROPIC_API_KEY is set in your .env file.")
         return ChatAnthropic(model=model_name, api_key=api_key)
+    elif model_provider == ModelProvider.GEMINI:  # 添加 Gemini 的处理逻辑
+        api_key = os.getenv("GEMINI_API_KEY")  # 获取 Gemini API 密钥
+        if not api_key:
+            print(f"API Key Error: Please make sure GEMINI_API_KEY is set in your .env file.")
+            raise ValueError("Gemini API key not found. Please make sure GEMINI_API_KEY is set in your .env file.")
+        return ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key) # 使用 ChatGoogleGenerativeAI
+    return None
